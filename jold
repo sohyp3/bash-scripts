@@ -1,0 +1,49 @@
+#!/bin/bash
+
+SESSION_NAME="jold"
+
+# Check if session exists
+if tmux has-session -t $SESSION_NAME 2>/dev/null; then
+  echo "Session $SESSION_NAME already exists. Attaching..."
+  tmux attach -t $SESSION_NAME
+  exit 0
+fi
+
+# Session does not exist, create it
+echo "Creating new tmux session: $SESSION_NAME"
+
+# cd /home/cofi/Documents/projects/vroom/frontend/vroom
+#
+# code .
+
+
+cd /home/hy/Documents/projects/fullStack/jold/
+
+source env/bin/activate
+
+cd jold_be
+
+tmux new-session -d -s $SESSION_NAME
+
+tmux rename-window -t $SESSION_NAME:1 'vi'
+tmux send-keys -t $SESSION_NAME:vi 'nvim .' C-m
+
+tmux new-window -t $SESSION_NAME -n 'dj'
+tmux send-keys -t $SESSION_NAME:dj 'run 0.0.0.0:8008' C-m
+
+tmux new-window -t $SESSION_NAME -n 'nv'
+tmux send-keys -t $SESSION_NAME:nv 'cd /home/hy/Documents/projects/fullStack/jold/jold_fe/' C-m
+tmux send-keys -t $SESSION_NAME:nv 'nvim .' C-m
+
+
+
+tmux new-window -t $SESSION_NAME -n 'sv'
+tmux send-keys -t $SESSION_NAME:sv 'cd /home/hy/Documents/projects/fullStack/jold/jold_fe/' C-m
+tmux send-keys -t $SESSION_NAME:sv 'code .' C-m
+tmux send-keys -t $SESSION_NAME:sv 'bun dev' C-m
+
+# Select the 'vi' window on attach
+tmux select-window -t $SESSION_NAME:vi
+
+# Attach to the session
+tmux attach -t $SESSION_NAME

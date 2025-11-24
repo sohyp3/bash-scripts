@@ -1,0 +1,42 @@
+#!/bin/bash
+
+branch="$1"
+
+if [ -z "$branch" ]; then
+    echo "🧩 Usage: git-clean-merge <branch>"
+    exit 1
+fi
+
+echo "🔍 Checking if branch exists locally..."
+if ! git rev-parse --verify "$branch" >/dev/null 2>&1; then
+    echo "❌ Branch '$branch' does not exist locally."
+    exit 1
+fi
+
+echo "🔄 Merging '$branch' with '-X theirs'..."
+if ! git merge -X theirs "$branch"; then
+    echo "❌ Merge failed. Resolve conflicts manually."
+    exit 1
+fi
+
+echo "🗑 Deleting local branch '$branch'..."
+if ! git branch -d "$branch"; then
+    echo "⚠ Could not delete local branch (maybe not merged?)"
+fi
+
+echo "🌐 Deleting remote branch..."
+if ! git push origin --delete "$branch"; then
+    echo "⚠ Remote branch could not be deleted (maybe doesn't exist?)"
+else
+    echo "✅ Remote branch deleted"
+fi
+
+echo "🌐 Pushing to the main..."
+if ! git push; then
+    echo "⚠  idk broken"
+else
+    echo "✅ Pushed"
+fi
+
+echo "🎉 Done."
+

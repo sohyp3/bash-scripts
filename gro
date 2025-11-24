@@ -1,0 +1,35 @@
+#/bin/bash
+
+cd /home/hy/Documents/projects/fullStack/gro
+
+source env/bin/activate
+
+cd backend
+
+
+tmux new-session -d -s gro
+
+tmux rename-window -t 1 'vi'
+# tmux send-keys -t gro 'cd backend' C-m
+tmux send-keys -t gro 'nvim .' C-m
+
+tmux new-window -t gro
+tmux rename-window 'dj'
+tmux send-keys -t gro 'run 0.0.0.0:8000' C-m
+
+
+tmux select-window -t 'vi'
+
+
+
+tmux new-window -t gro
+tmux rename-window 'xo'
+tmux send-keys -t gro 'cd /home/hy/Documents/projects/fullStack/gro/frontend/groci_customer_fe/' C-m
+tmux send-keys -t gro 'code .' C-m
+tmux send-keys -t gro 'npx expo start' C-m
+
+
+
+
+tmux attach -t gro
+
