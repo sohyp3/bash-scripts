@@ -1,42 +1,119 @@
 #!/bin/bash
 
+cmd="$(basename "$0")"
+
 branch="$1"
+flag="$2"
 
+# ------------------------------
+# HELP TEXT
+# ------------------------------
+show_help() {
+    echo "🧩 Usage: $cmd <branch> [options]"
+    echo ""
+    echo "Options:"
+    echo "  -h, --help         Show this help message"
+    echo "  -c, --continue     Continue merge after resolving conflicts"
+    echo "  -cu, --cleanup     Delete the branch locally and remotely"
+    echo ""
+    echo "Examples:"
+    echo "  $cmd feature-123"
+    echo "  $cmd feature-123 --continue"
+    echo "  $cmd feature-123 --cleanup"
+}
+
+# ------------------------------
+# FLAG PARSING (allow flags in $1 or $2)
+# ------------------------------
+case "$1" in
+    -h|--help) show_help; exit 0 ;;
+    -c|--continue)
+        echo "❌ No branch provided."
+        show_help
+        exit 1
+        ;;
+    -cu|--cleanup)
+        echo "❌ No branch provided."
+        show_help
+        exit 1
+        ;;
+esac
+
+case "$2" in
+    -h|--help) show_help; exit 0 ;;
+    -c|--continue) flag="--continue" ;;
+    -cu|--cleanup) flag="--cleanup" ;;
+esac
+
+# Require a branch unless cleanup or continue mode already triggered
 if [ -z "$branch" ]; then
-    echo "🧩 Usage: git-clean-merge <branch>"
+    show_help
     exit 1
 fi
 
-echo "🔍 Checking if branch exists locally..."
+# ------------------------------
+# CLEANUP MODE
+# ------------------------------
+if [ "$flag" == "--cleanup" ]; then
+    echo "🗑 Cleaning up branch '$branch' (local + remote)..."
+
+    git branch -d "$branch" 2>/dev/null || echo "⚠ Local branch may not exist or not merged."
+    git push origin --delete "$branch" 2>/dev/null || echo "⚠ Remote branch may not exist."
+
+    echo "🎉 Cleanup complete."
+    exit 0
+fi
+
+
+# ------------------------------
+# CONTINUE MODE
+# ------------------------------
+if [ "$flag" == "--continue" ]; then
+    echo "▶ Continuing merge after manual conflict resolution..."
+
+    git add .
+    if ! git commit --no-edit; then
+        echo "❌ Could not commit. Maybe nothing changed?"
+        exit 1
+    fi
+
+    echo "🌐 Pushing updated branch..."
+    git push || { echo "❌ Push failed"; exit 1; }
+
+    echo "🗑 Deleting branch '$branch' locally & remotely..."
+    git branch -d "$branch" 2>/dev/null
+    git push origin --delete "$branch" 2>/dev/null
+
+    echo "🎉 Merge completed successfully after conflict resolution."
+    exit 0
+fi
+
+
+# ------------------------------
+# NORMAL AUTO-MERGE MODE
+# ------------------------------
+echo "🔍 Checking branch..."
 if ! git rev-parse --verify "$branch" >/dev/null 2>&1; then
-    echo "❌ Branch '$branch' does not exist locally."
+    echo "❌ Branch '$branch' does not exist."
     exit 1
 fi
 
-echo "🔄 Merging '$branch' with '-X theirs'..."
-if ! git merge -X theirs "$branch"; then
-    echo "❌ Merge failed. Resolve conflicts manually."
+echo "🔄 Attempting auto-merge of '$branch'..."
+if ! git merge "$branch"; then
+    echo ""
+    echo "❌ Merge conflict detected!"
+    echo "🛑 I stopped before pushing anything."
+    echo ""
+    echo "Fix the conflicts manually, then run:"
+    echo "    $cmd $branch --continue"
     exit 1
 fi
 
-echo "🗑 Deleting local branch '$branch'..."
-if ! git branch -d "$branch"; then
-    echo "⚠ Could not delete local branch (maybe not merged?)"
-fi
+echo "🌐 Auto-merge succeeded! Pushing..."
+git push || { echo "❌ Push failed"; exit 1; }
 
-echo "🌐 Deleting remote branch..."
-if ! git push origin --delete "$branch"; then
-    echo "⚠ Remote branch could not be deleted (maybe doesn't exist?)"
-else
-    echo "✅ Remote branch deleted"
-fi
+echo "🗑 Cleaning up branch '$branch'..."
+git branch -d "$branch" 2>/dev/null
+git push origin --delete "$branch" 2>/dev/null
 
-echo "🌐 Pushing to the main..."
-if ! git push; then
-    echo "⚠  idk broken"
-else
-    echo "✅ Pushed"
-fi
-
-echo "🎉 Done."
-
+echo "🎉 Done. Branch merged & deleted safely."
